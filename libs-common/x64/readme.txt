@@ -23,3 +23,7 @@ libiconv.dll (required for XML) was also downloaded as a binary from the PHP pro
 (1) Got libiconv-1.12-vc9-x64.zip from http://pecl2.php.net/downloads/php-windows-builds/php-libs/VC9/x64/
 (2) Extracted libiconv.dll
 
+xdr:
+
+(1) Built from https://github.com/baoilleach/bsd-xdr
+
