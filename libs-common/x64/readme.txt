@@ -27,3 +27,4 @@ xdr:
 
 (1) Built from https://github.com/baoilleach/bsd-xdr
 
+libcairo, libexpat, fonconfig, freetype, pixman and png were compiled with MinGW64. cairo.lib is from https://github.com/cairoD/cairoD/tree/master/lib/64, though presumably there is some way to generate it from the cairo build.
