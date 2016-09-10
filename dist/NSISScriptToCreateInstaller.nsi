@@ -456,15 +456,30 @@ FunctionEnd
 ;General
 
   ;OpenBabel version
-  !define OBVersion 2.3.2
+  !define OBVersion 2.4.0rc1
+
+; !define SourceDir C:\Tools\openbabel\openbabel
+!ifndef SourceDir
+  !error "You need to specify the OB sourcedir as /DSourceDir=location"
+!endif
+; !define BuildDir C:\Tools\openbabel\openbabel\build2013
+!ifndef BuildDir
+  !error "You need to specify the OB buildir as /DBuildDir=location"
+!endif
+; !define Arch i386 ; i386 or x64
+!ifndef Arch
+  !error "You need to specify the architecture as either /DArch=i386 or /DArch=x64"
+!endif
+; !define myOutFile "OpenBabel-${OBVERSION}-x64.exe"
+!ifndef myOutFile
+  !error "You need to specify the output file as /DmyOutFile=name"
+!endif
 
   ;Name and file
   Name "OpenBabel ${OBVERSION}"
-  OutFile "OpenBabel${OBVERSION}_Windows_Installer.exe"
+  OutFile ${myOutFile}
+  InstallDir $PROGRAMFILES64\OpenBabel-${OBVERSION}
 
-  ;Default installation folder 
-  InstallDir "$PROGRAMFILES\OpenBabel-${OBVERSION}"
-  
   ;Get installation folder from registry if available
   InstallDirRegKey HKCU "Software\OpenBabel ${OBVERSION}" ""
 
@@ -490,7 +505,7 @@ FunctionEnd
 ;Pages
 
   !insertmacro MUI_PAGE_WELCOME
-  !insertmacro MUI_PAGE_LICENSE "../../COPYING"
+  !insertmacro MUI_PAGE_LICENSE "${SourceDir}/COPYING"
   !insertmacro MUI_PAGE_DIRECTORY
 
   ;Start Menu Folder Page Configuration
@@ -524,27 +539,37 @@ Section "Dummy Section" SecDummy
   Var /GLOBAL DataBase
 
   SetOutPath "$INSTDIR"
-  File /oname=License.txt ..\..\COPYING
-  File ..\sdf.bat
-  File ..\obdepict.bat
-  
-  File /r /x test_*.* ..\build\bin\Release\*.exe
-  File /r ..\build\bin\Release\*.obf
-  File ..\build\bin\Release\openbabel-2.dll
-  
-  File vcredist_x86.exe
+  File /oname=License.txt ${SourceDir}\COPYING
+  File sdf.bat
+  File obdepict.bat
+
+  File /r /x test_*.* ${BuildDir}\bin\Release\*.exe
+  File /r ${BuildDir}\bin\Release\*.obf
+  File ${BuildDir}\bin\Release\openbabel-2.dll
+
+  StrCmp ${Arch} "i386" 0 archIs64
+    File vcredist_x86.exe
+    Goto done
+  archIs64:
+    File vcredist_x64.exe
+  done:
 
   ;Java and CSharp bindings
-  File ..\..\scripts\java\openbabel.jar
-  File ..\build\bin\Release\openbabel_java.dll
-  File ..\build\bin\Release\openbabel_csharp.dll
-  File ..\..\scripts\csharp\OBDotNet.dll
+  File ${SourceDir}\scripts\java\openbabel.jar
+  File ${BuildDir}\bin\Release\openbabel_java.dll
+  File ${BuildDir}\bin\Release\openbabel_csharp.dll
+  File ${BuildDir}\bin\Release\OBDotNet.dll
 
-  File ..\libs\i386\*.dll
+  File ..\libs-common\${Arch}\*.dll
+  File ..\libs-vs12\${Arch}\*.dll
 
-  ;Install VC++ 2010 redistributable
-  ExecWait '"$INSTDIR/vcredist_x86.exe" /q:a'
-  Delete "$INSTDIR\vcredist_x86.exe"
+  ;Install VC++ 2013 redistributable
+  StrCmp ${Arch} "i386" 0 vcredist_for_x64
+  ExecWait '"$INSTDIR/vcredist_x86.exe" /quiet'
+    Goto vcredist_done
+  vcredist_for_x64:
+    ExecWait '"$INSTDIR/vcredist_x64.exe" /quiet'
+  vcredist_done:
 
   ;Create uninstaller
   WriteUninstaller "$INSTDIR\Uninstall.exe"
@@ -560,10 +585,10 @@ Section "Dummy Section" SecDummy
   StrCpy $DataBase "$APPDATA\OpenBabel-${OBVERSION}"
    
   SetOutPath "$DataBase\data"
-  File /r /x .svn /x *.h ..\..\data\*.*
+  File /r /x .svn /x *.h ${SourceDir}\data\*.*
 
   SetOutPath "$DataBase\doc"
-  File ..\..\doc\OpenBabelGUI.html
+  File ${SourceDir}\doc\OpenBabelGUI.html
   File ToolsPrograms.txt
 
   SetOutPath "$DataBase\examples"
@@ -586,7 +611,7 @@ Section "Dummy Section" SecDummy
     CreateDirectory "$SMPROGRAMS\$STARTMENU_FOLDER"
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Open Babel GUI.lnk" "$INSTDIR\OBGUI.exe"
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Guide to using Open Babel GUI.lnk" "$DataBase\doc\OpenBabelGUI.html"
-    CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Guide to using babel (web).lnk" "http://openbabel.org/docs/2.3.2"
+    CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Online documentation.lnk" "http://openbabel.org/docs/2.4.0"
     CreateShortCut "$SMPROGRAMS\$STARTMENU_FOLDER\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
   !insertmacro MUI_STARTMENU_WRITE_END
 
@@ -647,10 +672,12 @@ Section "Uninstall"
   
   Delete "$INSTDIR\openbabel-2.dll"
   Delete "$INSTDIR\iconv.dll"
+  Delete "$INSTDIR\libiconv.dll"
   Delete "$INSTDIR\libinchi.dll"
   Delete "$INSTDIR\libxml2.dll"
   Delete "$INSTDIR\zlib1.dll"
   Delete "$INSTDIR\xdr-0.dll"
+  Delete "$INSTDIR\xdr.dll"
   Delete "$INSTDIR\License.txt"
   Delete "$INSTDIR\OBGUI.exe"
   Delete "$INSTDIR\OpenBabelGUI.html"
@@ -659,10 +686,16 @@ Section "Uninstall"
   Delete "$INSTDIR\OBDotNet.dll"
   Delete "$INSTDIR\openbabel_csharp.dll"
   Delete "$INSTDIR\libpng14-14.dll"
+  Delete "$INSTDIR\libpng16-16.dll"
   Delete "$INSTDIR\freetype6.dll"
+  Delete "$INSTDIR\libfreetype-6.dll"
   Delete "$INSTDIR\libcairo-2.dll"
   Delete "$INSTDIR\libexpat-1.dll"
   Delete "$INSTDIR\libfontconfig-1.dll"
+  Delete "$INSTDIR\jsoncpp.dll"
+  Delete "$INSTDIR\libpixman-1-0.dll"
+  Delete "$INSTDIR\vcredist_x64.exe"
+  Delete "$INSTDIR\vcredist_x86.exe"
 
   Delete "$INSTDIR\Uninstall.exe"
 
